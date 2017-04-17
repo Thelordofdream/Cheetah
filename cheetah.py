@@ -28,7 +28,7 @@ def train(model, mnist, training_iters = 1000):
             if step % 10 == 0:
                 acc = sess.run(model.accuracy, feed_dict={model.x: batch_xs, model.y: batch_ys, my_network.keep_prob: 1.0})
                 loss = sess.run(model.cost, feed_dict={model.x: batch_xs, model.y: batch_ys, my_network.keep_prob: 1.0})
-                print("Iter " + str(step * model.batch_size) + ", Minibatch Loss= " + "{:.6f}".format(
+                print("Iter " + str(step) + ", Minibatch Loss= " + "{:.6f}".format(
                     loss) + ", Training Accuracy= " + "{:.5f}".format(acc))
             step += 1
         print("Optimization Finished!")
