@@ -1,10 +1,10 @@
 import tensorflow as tf
+import pymysql
 from tensorflow.contrib import rnn
 
 
 class nerual_network(object):
-    def __init__(self, name="N1", steps=28, inputs=28, hidden=128, batch_size=128, classes=10, learning_rate=0.01):
-        self.name = name
+    def __init__(self, steps=28, inputs=28, hidden=128, batch_size=128, classes=10, learning_rate=0.01):
         self.steps = steps
         self.inputs = inputs
         self.hidden = hidden
@@ -30,10 +30,11 @@ class nerual_network(object):
 
 
 class LSTM_layer(nerual_network):
-    def __init__(self):
+    def __init__(self, name="N1"):
         super(LSTM_layer, self).__init__()
+        self.name = name
         self.output = None
-        self.cost = None
+        self.cross_entropy = None
         self.optimizer = None
         self.accuracy = None
         with tf.variable_scope(self.name):
@@ -44,17 +45,37 @@ class LSTM_layer(nerual_network):
                 lstm_cell = rnn.BasicLSTMCell(self.inputs, forget_bias=0.1, state_is_tuple=True)
                 outputs, states = rnn.static_rnn(lstm_cell, x, initial_state=lstm_cell.zero_state(self.batch_size, tf.float32))
 
-            with tf.variable_scope("drop_out"):
+            with tf.variable_scope("dropout"):
                 readout = tf.matmul(outputs[-1], self.weights['hidden']) + self.biases['hidden']
                 self.output = tf.nn.dropout(readout, self.keep_prob)
 
             with tf.name_scope('loss'):
-                self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.output))
+                self.cross_entropy= tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.output))
+            tf.summary.scalar('cross_entropy', self.cross_entropy)
 
             with tf.name_scope('optimize'):
-                self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cost)
+                self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross_entropy)
                 correct_pred = tf.equal(tf.argmax(self.output, 1), tf.argmax(self.y, 1))
                 self.accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+            tf.summary.scalar('accuracy', self.accuracy)
+
+
+class data(nerual_network):
+    def __init__(self, stock_name="AAPL"):
+        super(data, self).__init__()
+        connection = pymysql.connect(user='root', password='root',
+                                     database='tickets')
+        cursor = connection.cursor()
+        commit = "select * from $%s;" % stock_name
+        cursor.execute(commit)
+        self.data = cursor.fetchall()
+        self.number = len(self.data)
+        self.start_point = -self.batch_size
+
+    def next_batch(self):
+        self.start_point += self.batch_size
+
+
 
 
 
