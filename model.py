@@ -23,7 +23,7 @@ class LSTM_layer(nerual_network):
         self.accuracy = None
         # with tf.variable_scope(self.name):
         with tf.variable_scope("input_layer"):
-            self.x = tf.placeholder("float", [None, self.steps, self.inputs])
+            self.x = tf.placeholder("float", [None, self.steps, self.inputs], name="x")
             x = self.shape_tranform()
 
         with tf.variable_scope("lstm_layer"):
@@ -36,11 +36,11 @@ class LSTM_layer(nerual_network):
             readout = tf.matmul(outputs[-1], hidden_w) + hidden_b
 
         with tf.variable_scope("dropout"):
-            self.keep_prob = tf.placeholder(tf.float32)
+            self.keep_prob = tf.placeholder(tf.float32, name="keep_prob")
             self.output = tf.nn.dropout(readout, self.keep_prob)
 
         with tf.name_scope('loss'):
-            self.y = tf.placeholder("float", [None, self.classes])
+            self.y = tf.placeholder("float", [None, self.classes], name="y")
             self.cross_entropy= tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.output))
         tf.summary.scalar('cross_entropy', self.cross_entropy)
 
