@@ -10,17 +10,10 @@ class nerual_network(object):
         self.hidden = hidden
         self.batch_size = batch_size
         self.classes = classes
+        self.learning_rate = learning_rate
         self.x = tf.placeholder("float", [None, self.steps, self.inputs])
         self.y = tf.placeholder("float", [None, self.classes])
         self.keep_prob = tf.placeholder(tf.float32)
-        self.learning_rate = learning_rate
-        # self.LSTM = LSTM_layer
-        self.biases = {
-            'hidden': tf.Variable(tf.random_normal([self.classes]), name='hidden_b'),
-        }
-        self.weights = {
-            'hidden': tf.Variable(tf.random_normal([self.inputs, self.classes]), name='hidden_w'),
-        }
 
     def shape_tranform(self):
         x = tf.transpose(self.x, [1, 0, 2])
@@ -46,7 +39,9 @@ class LSTM_layer(nerual_network):
                 outputs, states = rnn.static_rnn(lstm_cell, x, initial_state=lstm_cell.zero_state(self.batch_size, tf.float32))
 
             with tf.variable_scope("dropout"):
-                readout = tf.matmul(outputs[-1], self.weights['hidden']) + self.biases['hidden']
+                hidden_w = tf.Variable(tf.random_normal([self.inputs, self.classes]), name='hidden_w')
+                hidden_b = tf.Variable(tf.random_normal([self.classes]), name='hidden_b')
+                readout = tf.matmul(outputs[-1], hidden_w) + hidden_b
                 self.output = tf.nn.dropout(readout, self.keep_prob)
 
             with tf.name_scope('loss'):
