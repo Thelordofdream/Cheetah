@@ -22,7 +22,7 @@ class LSTM_layer(nerual_network):
         self.optimizer = None
         self.accuracy = None
         # with tf.variable_scope(self.name):
-        with tf.variable_scope("inputs"):
+        with tf.variable_scope("input_layer"):
             self.x = tf.placeholder("float", [None, self.steps, self.inputs])
             x = self.shape_tranform()
 
@@ -30,10 +30,12 @@ class LSTM_layer(nerual_network):
             lstm_cell = rnn.BasicLSTMCell(self.inputs, forget_bias=0.1, state_is_tuple=True)
             outputs, states = rnn.static_rnn(lstm_cell, x, initial_state=lstm_cell.zero_state(self.batch_size, tf.float32))
 
-        with tf.variable_scope("dropout"):
+        with tf.variable_scope("hidden_layer"):
             hidden_w = tf.Variable(tf.random_normal([self.inputs, self.classes]), name='hidden_w')
             hidden_b = tf.Variable(tf.random_normal([self.classes]), name='hidden_b')
             readout = tf.matmul(outputs[-1], hidden_w) + hidden_b
+
+        with tf.variable_scope("dropout"):
             self.keep_prob = tf.placeholder(tf.float32)
             self.output = tf.nn.dropout(readout, self.keep_prob)
 
