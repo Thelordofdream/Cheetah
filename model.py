@@ -41,7 +41,7 @@ class LSTM_layer(nerual_network):
             with tf.variable_scope("inputs"):
                 x = self.shape_tranform()
 
-            with tf.variable_scope("model"):
+            with tf.variable_scope("lstm_layer"):
                 lstm_cell = rnn.BasicLSTMCell(self.inputs, forget_bias=0.1, state_is_tuple=True)
                 outputs, states = rnn.static_rnn(lstm_cell, x, initial_state=lstm_cell.zero_state(self.batch_size, tf.float32))
 
@@ -53,7 +53,7 @@ class LSTM_layer(nerual_network):
                 self.cross_entropy= tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.output))
             tf.summary.scalar('cross_entropy', self.cross_entropy)
 
-            with tf.name_scope('optimize'):
+            with tf.name_scope('optimizer'):
                 self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross_entropy)
                 correct_pred = tf.equal(tf.argmax(self.output, 1), tf.argmax(self.y, 1))
                 self.accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))

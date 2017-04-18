@@ -36,7 +36,7 @@ def save(sess):
 
 if __name__ == "__main__":
     mnist = input_data.read_data_sets("MNIST_data", one_hot=True)
-    my_network = model.LSTM_layer(name="LSTM")
+    my_network = model.LSTM_layer(name="MNIST")
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
         train(my_network, mnist, sess)
