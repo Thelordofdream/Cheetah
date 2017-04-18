@@ -14,10 +14,7 @@ class nerual_network(object):
         self.y = tf.placeholder("float", [None, self.classes])
         self.keep_prob = tf.placeholder(tf.float32)
         self.learning_rate = learning_rate
-        self.output = None
-        self.cost = None
-        self.optimizer = None
-        self.accuracy = None
+        # self.LSTM = LSTM_layer
         self.biases = {
             'hidden': tf.Variable(tf.random_normal([self.classes]), name='hidden_b'),
         }
@@ -31,7 +28,14 @@ class nerual_network(object):
         x = tf.split(x, self.steps, 0)
         return x
 
-    def LSTM_layer(self):
+
+class LSTM_layer(nerual_network):
+    def __init__(self):
+        super(LSTM_layer, self).__init__()
+        self.output = None
+        self.cost = None
+        self.optimizer = None
+        self.accuracy = None
         with tf.variable_scope(self.name):
             x = self.shape_tranform()
             lstm_cell = rnn.BasicLSTMCell(self.inputs, forget_bias=0.1, state_is_tuple=True)
@@ -39,10 +43,10 @@ class nerual_network(object):
             readout = tf.matmul(outputs[-1], self.weights['hidden']) + self.biases['hidden']
             self.output = tf.nn.dropout(readout, self.keep_prob)
 
-    def set_optimizer(self):
         self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.output))
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cost)
         correct_pred = tf.equal(tf.argmax(self.output, 1), tf.argmax(self.y, 1))
         self.accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+
 
 
