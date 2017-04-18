@@ -11,15 +11,6 @@ class nerual_network(object):
         self.batch_size = batch_size
         self.classes = classes
         self.learning_rate = learning_rate
-        self.x = tf.placeholder("float", [None, self.steps, self.inputs])
-        self.y = tf.placeholder("float", [None, self.classes])
-        self.keep_prob = tf.placeholder(tf.float32)
-
-    def shape_tranform(self):
-        x = tf.transpose(self.x, [1, 0, 2])
-        x = tf.reshape(x , [-1, self.inputs])
-        x = tf.split(x, self.steps, 0)
-        return x
 
 
 class LSTM_layer(nerual_network):
@@ -30,31 +21,40 @@ class LSTM_layer(nerual_network):
         self.cross_entropy = None
         self.optimizer = None
         self.accuracy = None
-        with tf.variable_scope(self.name):
-            with tf.variable_scope("inputs"):
-                x = self.shape_tranform()
+        # with tf.variable_scope(self.name):
+        with tf.variable_scope("inputs"):
+            self.x = tf.placeholder("float", [None, self.steps, self.inputs])
+            x = self.shape_tranform()
 
-            with tf.variable_scope("lstm_layer"):
-                lstm_cell = rnn.BasicLSTMCell(self.inputs, forget_bias=0.1, state_is_tuple=True)
-                outputs, states = rnn.static_rnn(lstm_cell, x, initial_state=lstm_cell.zero_state(self.batch_size, tf.float32))
+        with tf.variable_scope("lstm_layer"):
+            lstm_cell = rnn.BasicLSTMCell(self.inputs, forget_bias=0.1, state_is_tuple=True)
+            outputs, states = rnn.static_rnn(lstm_cell, x, initial_state=lstm_cell.zero_state(self.batch_size, tf.float32))
 
-            with tf.variable_scope("dropout"):
-                hidden_w = tf.Variable(tf.random_normal([self.inputs, self.classes]), name='hidden_w')
-                hidden_b = tf.Variable(tf.random_normal([self.classes]), name='hidden_b')
-                readout = tf.matmul(outputs[-1], hidden_w) + hidden_b
-                self.output = tf.nn.dropout(readout, self.keep_prob)
+        with tf.variable_scope("dropout"):
+            hidden_w = tf.Variable(tf.random_normal([self.inputs, self.classes]), name='hidden_w')
+            hidden_b = tf.Variable(tf.random_normal([self.classes]), name='hidden_b')
+            readout = tf.matmul(outputs[-1], hidden_w) + hidden_b
+            self.keep_prob = tf.placeholder(tf.float32)
+            self.output = tf.nn.dropout(readout, self.keep_prob)
 
-            with tf.name_scope('loss'):
-                self.cross_entropy= tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.output))
-            tf.summary.scalar('cross_entropy', self.cross_entropy)
+        with tf.name_scope('loss'):
+            self.y = tf.placeholder("float", [None, self.classes])
+            self.cross_entropy= tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.output))
+        tf.summary.scalar('cross_entropy', self.cross_entropy)
 
-            with tf.name_scope('optimizer'):
-                self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross_entropy)
-                correct_pred = tf.equal(tf.argmax(self.output, 1), tf.argmax(self.y, 1))
-                self.accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-            tf.summary.scalar('accuracy', self.accuracy)
+        with tf.name_scope('optimizer'):
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross_entropy)
+            correct_pred = tf.equal(tf.argmax(self.output, 1), tf.argmax(self.y, 1))
+            self.accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+        tf.summary.scalar('accuracy', self.accuracy)
 
-            self.merged = tf.summary.merge_all()
+        self.merged = tf.summary.merge_all()
+
+    def shape_tranform(self):
+        x = tf.transpose(self.x, [1, 0, 2])
+        x = tf.reshape(x , [-1, self.inputs])
+        x = tf.split(x, self.steps, 0)
+        return x
 
 
 class data(nerual_network):
