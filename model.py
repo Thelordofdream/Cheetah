@@ -59,6 +59,8 @@ class LSTM_layer(nerual_network):
                 self.accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
             tf.summary.scalar('accuracy', self.accuracy)
 
+            self.merged = tf.summary.merge_all()
+
 
 class data(nerual_network):
     def __init__(self, stock_name="AAPL"):

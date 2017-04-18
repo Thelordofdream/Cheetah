@@ -5,8 +5,7 @@ import pymysql
 import model
 
 
-def train(model, mnist, sess, training_iters = 200):
-    summary_op = tf.summary.merge_all()
+def train(model, mnist, sess, training_iters = 1000):
     train_writer = tf.summary.FileWriter('./train', sess.graph)
     sess.run(init)
     step = 1
@@ -15,9 +14,7 @@ def train(model, mnist, sess, training_iters = 200):
         batch_xs = batch_xs.reshape((model.batch_size, model.steps, model.inputs))
         sess.run(model.optimizer, feed_dict={model.x: batch_xs, model.y: batch_ys, model.keep_prob: 0.5})
         if step % 10 == 0:
-            loss = sess.run(model.cross_entropy, feed_dict={model.x: batch_xs, model.y: batch_ys, model.keep_prob: 1.0})
-            acc = sess.run(model.accuracy,feed_dict={model.x: batch_xs, model.y: batch_ys, model.keep_prob: 1.0})
-            summary = sess.run(summary_op, feed_dict={model.x: batch_xs, model.y: batch_ys, model.keep_prob: 1.0})
+            summary, loss, acc = sess.run([model.merged, model.cross_entropy, model.accuracy], feed_dict={model.x: batch_xs, model.y: batch_ys, model.keep_prob: 1.0})
             train_writer.add_summary(summary, step)
             print("Iter " + str(step) + ", Minibatch Loss= " + "{:.6f}".format(loss) + ", Training Accuracy= " + "{:.5f}".format(acc))
         step += 1
