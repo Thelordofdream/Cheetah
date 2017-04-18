@@ -37,16 +37,24 @@ class LSTM_layer(nerual_network):
         self.optimizer = None
         self.accuracy = None
         with tf.variable_scope(self.name):
-            x = self.shape_tranform()
-            lstm_cell = rnn.BasicLSTMCell(self.inputs, forget_bias=0.1, state_is_tuple=True)
-            outputs, states = rnn.static_rnn(lstm_cell, x, initial_state=lstm_cell.zero_state(self.batch_size, tf.float32))
-            readout = tf.matmul(outputs[-1], self.weights['hidden']) + self.biases['hidden']
-            self.output = tf.nn.dropout(readout, self.keep_prob)
+            with tf.variable_scope("inputs"):
+                x = self.shape_tranform()
 
-        self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.output))
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cost)
-        correct_pred = tf.equal(tf.argmax(self.output, 1), tf.argmax(self.y, 1))
-        self.accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+            with tf.variable_scope("model"):
+                lstm_cell = rnn.BasicLSTMCell(self.inputs, forget_bias=0.1, state_is_tuple=True)
+                outputs, states = rnn.static_rnn(lstm_cell, x, initial_state=lstm_cell.zero_state(self.batch_size, tf.float32))
+
+            with tf.variable_scope("drop_out"):
+                readout = tf.matmul(outputs[-1], self.weights['hidden']) + self.biases['hidden']
+                self.output = tf.nn.dropout(readout, self.keep_prob)
+
+            with tf.name_scope('loss'):
+                self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.output))
+
+            with tf.name_scope('optimize'):
+                self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cost)
+                correct_pred = tf.equal(tf.argmax(self.output, 1), tf.argmax(self.y, 1))
+                self.accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
 
 
