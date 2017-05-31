@@ -1,10 +1,11 @@
 import tensorflow as tf
 import pymysql
 from tensorflow.contrib import rnn
+import numpy as np
 
 
 class nerual_network(object):
-    def __init__(self, steps=28, inputs=28, hidden=128, batch_size=128, classes=10, learning_rate=0.01):
+    def __init__(self, steps=10, inputs=5, hidden=5, batch_size=200, classes=1, learning_rate=0.001):
         self.steps = steps
         self.inputs = inputs
         self.hidden = hidden
@@ -18,10 +19,9 @@ class LSTM_layer(nerual_network):
         super(LSTM_layer, self).__init__()
         self.name = name
         self.output = None
-        self.cross_entropy = None
+        self.cost = None
         self.optimizer = None
         self.accuracy = None
-        # with tf.variable_scope(self.name):
         with tf.variable_scope("input_layer"):
             self.x = tf.placeholder("float", [None, self.steps, self.inputs], name="x")
             x = self.shape_tranform()
@@ -41,12 +41,12 @@ class LSTM_layer(nerual_network):
 
         with tf.name_scope('loss'):
             self.y = tf.placeholder("float", [None, self.classes], name="y")
-            self.cross_entropy= tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.output))
-        tf.summary.scalar('cross_entropy', self.cross_entropy)
+            self.cost = tf.reduce_mean(tf.square(self.y - self.output)/2)
+        tf.summary.scalar('cross', self.cost)
 
         with tf.name_scope('optimizer'):
-            self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross_entropy)
-            correct_pred = tf.equal(tf.argmax(self.output, 1), tf.argmax(self.y, 1))
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cost)
+            correct_pred = tf.equal(self.output, self.y)
             self.accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
         tf.summary.scalar('accuracy', self.accuracy)
 
@@ -60,19 +60,36 @@ class LSTM_layer(nerual_network):
 
 
 class data(nerual_network):
-    def __init__(self, stock_name="AAPL"):
+    def __init__(self, stock_name):
         super(data, self).__init__()
         connection = pymysql.connect(user='root', password='root',
                                      database='tickets')
         cursor = connection.cursor()
         commit = "select * from $%s;" % stock_name
         cursor.execute(commit)
-        self.data = cursor.fetchall()
+        self.data = np.array([list([float(j) for j in i[2:]]) for i in cursor.fetchall()])
         self.number = len(self.data)
-        self.start_point = -self.batch_size
+        self.start_point = 0
 
     def next_batch(self):
-        self.start_point += self.batch_size
+        if (self.start_point + self.batch_size * self.steps) > self.number:
+            self.start_point = 0
+        batch_x = np.reshape(
+            self.data[self.start_point: self.start_point + self.batch_size * self.steps], [self.batch_size, self.steps, self.inputs])
+        batch_y = np.reshape(
+            self.data[self.start_point + self.steps:self.start_point + self.batch_size * self.steps + self.steps:self.steps, 0], [self.batch_size, 1])
+        self.start_point += self.steps
+        return batch_x, batch_y
+
+    def test_batch(self):
+        batch_x = np.reshape(
+            self.data[0: self.batch_size * self.steps],
+            [self.batch_size, self.steps, self.inputs])
+        batch_y = np.reshape(
+            self.data[
+            self.steps:self.batch_size * self.steps + self.steps:self.steps, 0],
+            [self.batch_size, 1])
+        return batch_x, batch_y
 
 
 
