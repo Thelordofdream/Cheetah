@@ -1,11 +1,9 @@
 import tensorflow as tf
-import pymysql
 from tensorflow.contrib import rnn
-import numpy as np
 
 
 class nerual_network(object):
-    def __init__(self, steps=10, inputs=4, hidden=4, batch_size=330, classes=1):
+    def __init__(self, steps=10, inputs=5, hidden=5, batch_size=500, classes=1):
         self.steps = steps
         self.inputs = inputs
         self.hidden = hidden
@@ -61,38 +59,24 @@ class LSTM_layer(nerual_network):
 
 
 class data(nerual_network):
-    def __init__(self, stock_name):
+    def __init__(self, filename):
         super(data, self).__init__()
-        connection = pymysql.connect(user='root', password='root',
-                                     database='tickets')
-        cursor = connection.cursor()
-        commit = "select * from $%s;" % stock_name
-        cursor.execute(commit)
-        self.data = np.array([list([float(j)/110 for j in i[2:6]]) for i in cursor.fetchall()])
-        self.number = len(self.data)
-        self.start_point = 0
+        filename_queue = tf.train.string_input_producer([filename])
+        reader = tf.TFRecordReader()
+        _, serialized_example = reader.read(filename_queue)
+        features = tf.parse_single_example(serialized_example,
+                                           features={
+                                               'label': tf.FixedLenFeature([1], tf.float32),
+                                               'sequence': tf.FixedLenFeature([], tf.string),
+                                           })
+        self.sequence = tf.decode_raw(features['sequence'], tf.float64)
+        self.sequence = tf.reshape(self.sequence, shape=[self.steps, self.inputs])
+        self.label = tf.cast(features['label'], tf.float32)
 
-    def next_batch(self):
-        if (self.start_point + self.batch_size * self.steps) > self.number:
-            self.start_point = 0
-        batch_x = np.reshape(
-            self.data[self.start_point: self.start_point + self.batch_size * self.steps], [self.batch_size, self.steps, self.inputs])
-        batch_y = np.reshape(
-            self.data[self.start_point + self.steps:self.start_point + self.batch_size * self.steps + self.steps:self.steps, -1], [self.batch_size, 1])
-        self.start_point += self.steps
-        return batch_x, batch_y
-
-    def test_batch(self):
-        batch_x = np.reshape(
-            self.data[self.number - 1 - self.batch_size * self.steps - self.steps:self.number - 1 - self.steps],
-            [self.batch_size, self.steps, self.inputs])
-        batch_y = np.reshape(
-            self.data[
-            self.number - 1 - self.batch_size * self.steps:self.number - 1:self.steps, -1],
-            [self.batch_size, 1])
-        return batch_x, batch_y
-
-
+    def get_batches(self):
+        x_batch, y_batch = tf.train.shuffle_batch([self.sequence, self.label], batch_size=self.batch_size,
+                               capacity=1000, min_after_dequeue=200, num_threads=4)
+        return x_batch, y_batch
 
 
 
