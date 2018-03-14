@@ -3,18 +3,19 @@ import tensorflow as tf
 import numpy as np
 import pymysql
 import model
+import matplotlib.pyplot as plt
 
 
-def train(model, data, sess, training_iters=100000, display_step=5000):
+def train(model, data, sess, training_iters=40000, display_step=1000):
     train_writer = tf.summary.FileWriter('./train', sess.graph)
     sess.run(init)
     step = 1
     while step <= training_iters:
         batch_xs, batch_ys = data.next_batch()
         # batch_xs = batch_xs.reshape((model.batch_size, model.steps, model.inputs))
-        sess.run(model.optimizer, feed_dict={model.x: batch_xs, model.y: batch_ys, model.keep_prob: 0.5})
+        sess.run(model.optimizer, feed_dict={model.x: batch_xs, model.y: batch_ys})
         if step % display_step == 0:
-            summary, loss, acc = sess.run([model.merged, model.cost, model.accuracy], feed_dict={model.x: batch_xs, model.y: batch_ys, model.keep_prob: 1.0})
+            summary, loss, acc = sess.run([model.merged, model.cost, model.accuracy], feed_dict={model.x: batch_xs, model.y: batch_ys})
             train_writer.add_summary(summary, step)
             print("Iter " + str(step) + ", Minibatch Loss= " + "{:.6f}".format(loss) + ", Training Accuracy= " + "{:.5f}".format(acc))
         step += 1
@@ -24,9 +25,13 @@ def train(model, data, sess, training_iters=100000, display_step=5000):
 def test(model, data, sess):
     test_data, test_label = data.test_batch()
     test_data = test_data.reshape((-1, model.steps, model.inputs))
-    test = sess.run(model.output, feed_dict={model.x: test_data, model.y: test_label, model.keep_prob:1.0})
+    test = sess.run(model.output, feed_dict={model.x: test_data, model.y: test_label})
     for i in range(model.batch_size):
-        print test[i], test_label[i]
+        print test[i]*110, test_label[i]*110
+    plt.plot(test_label * 110, 'b-')
+    plt.plot(test * 110, 'r-')
+    plt.legend(loc='best')
+    plt.show()
 
 def save(sess):
     saver = tf.train.Saver()
@@ -37,7 +42,7 @@ def save(sess):
 if __name__ == "__main__":
     # mnist = input_data.read_data_sets("MNIST_data", one_hot=True)
     data = model.data(stock_name="AAPL")
-    my_network = model.LSTM_layer(name="trading")
+    my_network = model.LSTM_layer(name="trading", learning_rate=0.01)
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
         train(my_network, data, sess)
